@@ -74,7 +74,7 @@ if __name__=='__main__':
     # Load checkpoint
     optimizer = optim.Adam(net.parameters(), lr=0.001)
     checkpoint = torch.load(checkpoint_path)
-    net.load_state_dict(checkpoint['model_state_dict'])
+    #net.load_state_dict(checkpoint['model_state_dict']) SINCE THE LAST LAYER IN THE 
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']
     print("Loaded checkpoint %s (epoch: %d)"%(checkpoint_path, epoch))
