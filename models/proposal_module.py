@@ -51,7 +51,7 @@ def decode_scores(net, end_points, num_class, num_heading_bin, num_size_cluster,
 
     return end_points
 
-def decode_wires(net, end_points, num_class, num_heading_bin, num_size_cluster, mean_size_arr):
+def decode_cables(net, end_points, num_class, num_heading_bin, num_size_cluster, mean_size_arr):
     net_transposed = net.transpose(2,1) # (batch_size, 1024, ..)
     print("net.T:", net_transposed.shape)
     batch_size = net_transposed.shape[0]
@@ -64,12 +64,14 @@ def decode_wires(net, end_points, num_class, num_heading_bin, num_size_cluster, 
     center = base_xyz + net_transposed[:,:,2:5] # (batch_size, num_proposal, 3)
     end_points['center'] = center
 
-    end_points['cable_point_1'] = net_transposed[:,:,5:8]
-    end_points['cable_point_2'] = net_transposed[:,:,8:11]
-    end_points['cable_point_3'] = net_transposed[:,:,11:14]
-    end_points['cable_point_4'] = net_transposed[:,:,14:17]
-    end_points['cable_point_5'] = net_transposed[:,:,17:20]
+    cable_point_1 = net_transposed[:,:,5:8]
+    cable_point_2 = net_transposed[:,:,8:11]
+    cable_point_3 = net_transposed[:,:,11:14]
+    cable_point_4 = net_transposed[:,:,14:17]
+    cable_point_5 = net_transposed[:,:,17:20]
     end_points['sem_cls_scores'] = net_transposed[:,:,20:]
+    end_points['cable_points'] = torch.cat((cable_point_1,cable_point_2,cable_point_3,cable_point_4,cable_point_5),dim=2)
+    print(f"Cablepoint shape:{end_points['cable_points'].shape}")
     return end_points
 
 class ProposalModule(nn.Module):
@@ -99,7 +101,7 @@ class ProposalModule(nn.Module):
         # heading class+residual (num_heading_bin*2), size class+residual(num_size_cluster*4)
         self.conv1 = torch.nn.Conv1d(128,128,1)
         self.conv2 = torch.nn.Conv1d(128,128,1)
-        self.conv3 = torch.nn.Conv1d(128,2+3+15+self.num_class,1) # New meaning is (2 for objectness scores, 3 for center, 15 for 5 geometric points representing a wire, and last score is for classification.)
+        self.conv3 = torch.nn.Conv1d(128,2+3+15+self.num_class,1) # New meaning is (2 for objectness scores, 3 for center, 15 for 5 geometric points representing a wire, and last scores are for classification.)
         #self.conv3 = torch.nn.Conv1d(128,2+3+num_heading_bin*2+num_size_cluster*4+self.num_class,1)
         self.bn1 = torch.nn.BatchNorm1d(128)
         self.bn2 = torch.nn.BatchNorm1d(128)
@@ -143,7 +145,7 @@ class ProposalModule(nn.Module):
         print(f"Features shape after third conv layer: {net.shape}")
 
         #end_points = decode_scores(net, end_points, self.num_class, self.num_heading_bin, self.num_size_cluster, self.mean_size_arr)
-        end_points = decode_wires(net, end_points, self.num_class, self.num_heading_bin, self.num_size_cluster, self.mean_size_arr)
+        end_points = decode_cables(net, end_points, self.num_class, self.num_heading_bin, self.num_size_cluster, self.mean_size_arr)
         return end_points
 
 if __name__=='__main__':
