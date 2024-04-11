@@ -92,6 +92,14 @@ if __name__=='__main__':
         end_points = net(inputs)
     toc = time.time()
     print('Inference time: %f'%(toc-tic))
+
+    print("\n========input and output========")
+    #print(f"shape: {end_points}")
+    print(f"keys input: {list(inputs.keys())}")
+    print(f"keys output: {list(end_points.keys())}")
+    #print(f"VoteNetParameters {net}")
+    print("========input and output========\n")
+
     end_points['point_clouds'] = inputs['point_clouds']
     pred_map_cls = parse_predictions(end_points, eval_config_dict)
     print('Finished detection. %d object detected.'%(len(pred_map_cls[0])))
