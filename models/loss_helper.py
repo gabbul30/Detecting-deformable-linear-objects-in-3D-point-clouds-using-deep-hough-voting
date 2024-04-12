@@ -107,6 +107,20 @@ def compute_objectness_loss(end_points):
 
     return objectness_loss, objectness_label, objectness_mask, object_assignment
 
+def compute_cable_loss(end_points):
+    pred_center = end_points['center']
+    gt_center = end_points['center_label']
+
+    dist1, ind1, dist2, _ = nn_distance(pred_center, gt_center)
+
+    
+    pred_cable_points = end_points['cable_points']
+    gt_cable_points = end_points['cable_points_label']
+
+
+    cable_points_loss = ...
+
+
 def compute_box_and_sem_cls_loss(end_points, config):
     """ Compute 3D bounding box and semantic classification loss.
 

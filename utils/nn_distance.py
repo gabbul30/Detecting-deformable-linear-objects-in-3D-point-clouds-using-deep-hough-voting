@@ -61,17 +61,21 @@ def nn_distance(pc1, pc2, l1smooth=False, delta=1.0, l1=False):
     return dist1, idx1, dist2, idx2
 
 def demo_nn_distance():
+    N = 1
+    M = 2
     np.random.seed(0)
-    pc1arr = np.random.random((1,5,3))
-    pc2arr = np.random.random((1,6,3))
+    pc1arr = np.random.random((1,N,3))
+    pc2arr = np.random.random((1,M,3))
+    print(pc1arr)
+    print(pc2arr)
     pc1 = torch.from_numpy(pc1arr.astype(np.float32))
     pc2 = torch.from_numpy(pc2arr.astype(np.float32))
     dist1, idx1, dist2, idx2 = nn_distance(pc1, pc2)
     print(dist1)
     print(idx1)
-    dist = np.zeros((5,6))
-    for i in range(5):
-        for j in range(6):
+    dist = np.zeros((N,M))
+    for i in range(N):
+        for j in range(M):
             dist[i,j] = np.sum((pc1arr[0,i,:] - pc2arr[0,j,:]) ** 2)
     print(dist)
     print('-'*30)
@@ -79,9 +83,9 @@ def demo_nn_distance():
     dist1, idx1, dist2, idx2 = nn_distance(pc1, pc2, True)
     print(dist1)
     print(idx1)
-    dist = np.zeros((5,6))
-    for i in range(5):
-        for j in range(6):
+    dist = np.zeros((N,M))
+    for i in range(N):
+        for j in range(M):
             error = np.abs(pc1arr[0,i,:] - pc2arr[0,j,:])
             quad = np.minimum(error, 1.0)
             linear = error - quad
