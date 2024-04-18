@@ -100,17 +100,18 @@ class dlosDetectionDataset(Dataset):
 
         # Get pointcloud from depth image at idx
         # point_cloud_depth = np.load(os.path.join(self.data_path, fileNum)+'depth_'+ depthNum +'.png')# Nx3 was Nx6 with color
-        depth_image = cv2.imread(os.path.join(self.raw_data_path, fileNum)+'depth_'+ depthNum +'.png', cv2.IMREAD_UNCHANGED)
+        depth_image = cv2.imread(os.path.join(self.raw_data_path, fileNum)+'/depth_'+ str(depthNum) +'.png', cv2.IMREAD_UNCHANGED)
+        # For debug print("PATH:", os.path.join(self.raw_data_path, fileNum)+'/depth_'+ str(depthNum) +'.png' )
         point_cloud = rgbd_to_pcd(depth_image)
         processedPointCloud = np.asarray(point_cloud.points)
         
         
         # Calculating center, bounding box, and b-spline points at idx.
-        Cable1 = np.load(os.path.join(self.raw_data_path, fileNum)+'dlo_positions_1.npy')[depthNum, :, :] # 31, 3
-        Cable2 = np.load(os.path.join(self.raw_data_path, fileNum)+'dlo_positions_2.npy')[depthNum, :, :]
+        Cable1 = np.load(os.path.join(self.raw_data_path, fileNum)+'/dlo_positions_1.npy')[depthNum, :, :] # 31, 3
+        Cable2 = np.load(os.path.join(self.raw_data_path, fileNum)+'/dlo_positions_2.npy')[depthNum, :, :]
         # Bspline points
         labelPointsCable1 = np.asarray(fitting.approximate_curve(Cable1.tolist(), degree=2, ctrlpts_size=5).ctrlpts)
-        labelPointsCable2 = np.assaray(fitting.approximate_curve(Cable2.tolist(), degree=2, ctrlpts_size=5).ctrlpts)
+        labelPointsCable2 = np.asarray(fitting.approximate_curve(Cable2.tolist(), degree=2, ctrlpts_size=5).ctrlpts)
         # Centers
         labelCenterCable1 = np.mean(labelPointsCable1, axis=0)
         labelCenterCable2 = np.mean(labelPointsCable2, axis=0)
@@ -119,15 +120,15 @@ class dlosDetectionDataset(Dataset):
         maxCorner1 = np.max(labelPointsCable1, axis=0)
         minCorner1 = np.min(labelPointsCable1, axis=0)
         size1 = maxCorner1 - minCorner1
-        bbox1 = np.concatenate((labelCenterCable1, size1, 0, 0), axis=1) # angle forced to 0 and class to 0 (for class cable)
+        bbox1 = np.concatenate((labelCenterCable1, size1, 0, 0), axis=None) # angle forced to 0 and class to 0 (for class cable)
         
         maxCorner2 = np.max(labelPointsCable2, axis=0)
         minCorner2 = np.min(labelPointsCable2, axis=0)
         size2 = maxCorner2 - minCorner2
-        bbox2 = np.concatenate((labelCenterCable2, size2, 0, 0), axis=1) # angle forced to 0 and class to 0 (for class cable)
+        bbox2 = np.concatenate((labelCenterCable2, size2, 0, 0), axis=None) # angle forced to 0 and class to 0 (for class cable)
 
-        bboxes = np.hstack((bbox1, bbox2))
-
+        bboxes = np.vstack((bbox1, bbox2))
+        print("How all boxes look like:", bboxes.shape)
         # Size class
         sizeClasses = np.zeros((MAX_NUM_OBJ,))
         sizeResiduals = np.zeros((MAX_NUM_OBJ, 3))
@@ -136,19 +137,19 @@ class dlosDetectionDataset(Dataset):
 
         # Box label mask
         labelMask = np.zeros((MAX_NUM_OBJ))
-        labelMask[0:centers.shape[0]] = 1
+        labelMask[0:labelCenters.shape[0]] = 1
 
         # Vote label (not done)
-        pointCloud, choices pc_util.random_sampling(processedPointCloud, self.num_points, return_choices=True)
-        pointVotes = np.zeros((processedPointCloud.shape(0), 10))
-        # Here is a check if a point is in a bounding box.
-        for point in range(processedPointCloud.shape(0)):
-            for box in range(bboxes.shape(0)):
-                tempPoint = processedPointCloud[point] - bboxes[box][:3]
-                if not np.any(tempPoint < (-bboxes[box][3:6])/2):
-                    if not np.any(tempPoint > bboxes[box][3:6]/2):
+        pointCloud, choices = pc_util.random_sampling(processedPointCloud, self.num_points, return_choices=True)
+        pointVotes = np.zeros((processedPointCloud.shape[0], 10))
+        # Check if a point is in a bounding box
+        for point in range(processedPointCloud.shape[0]):
+            for box in range(bboxes.shape[0]):
+                tempPoint = processedPointCloud[point] - bboxes[box,:3]
+                if not np.any(tempPoint < (-bboxes[box, 3:6])/2):
+                    if not np.any(tempPoint > bboxes[box, 3:6]/2):
                         pointVotes[point][0] = 1
-                        pointVotes[point][1:4] = bboxes[box][:3]
+                        pointVotes[point][1:4] = bboxes[box,:3]
         pointVotes = np.tile(pointVotes, (1, 3)) # From scannet dataloader
         pointVotesMask = pointVotes[choices, 0] # From sunrgbd dataloader
         pointVotes = pointVotes[choices, 1:] # From sunrgbd dataloader

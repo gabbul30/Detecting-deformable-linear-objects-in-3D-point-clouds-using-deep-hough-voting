@@ -134,13 +134,15 @@ elif FLAGS.dataset == 'scannet':
     TEST_DATASET = ScannetDetectionDataset('val', num_points=NUM_POINT,
         augment=False,
         use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
-# elif Flags.dataset == 'dlos':
-#     sys.path.append(os.path.join(ROOT_DIR, 'syntheticDataDlo'))
-#     from dlosDetectionDataset import dlosDetectionDataset, MAX_NUM_OBJ
-#     from model_util_dlos import dlosDatasetConfig
-#     DATASET_CONFIG = dlosDatasetConfig()
-#     TRAIN_DATASET = dlosDetectionDataset('train', num_points=NUM_POINT,
-#         augment=False, use_color=FLAGS.use_color, use_height=(not))
+elif FLAGS.dataset == 'dlos':
+    sys.path.append(os.path.join(ROOT_DIR, 'syntheticDataDlo'))
+    from dlos_detection_dataset import dlosDetectionDataset, MAX_NUM_OBJ
+    from model_util_dlos import dlosDatasetConfig
+    DATASET_CONFIG = dlosDatasetConfig()
+    TRAIN_DATASET = dlosDetectionDataset('train', num_points=NUM_POINT,
+        augment=False, use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
+    TEST_DATASET = dlosDetectionDataset('test', num_points=NUM_POINT,
+        augment=False, use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
 else:
     print('Unknown dataset %s. Exiting...'%(FLAGS.dataset))
     exit(-1)
