@@ -70,6 +70,7 @@ class dlosDetectionDataset(Dataset):
         self.raw_data_path = os.path.join(ROOT_DIR, 'syntheticDataDlo/dlos_data')
         self.num_points = num_points
         self.augment = augment
+        self.use_height = use_height
         
         self.scanNumbers = np.load(os.path.join(self.raw_data_path, (split_set + ".npy")))
        
@@ -94,6 +95,7 @@ class dlosDetectionDataset(Dataset):
             scan_idx: int scan index in scan_names list
             max_gt_bboxes: unused
         """
+        # print("is use height true", self.use_height)
         idx = self.scanNumbers[idx]
         depthNum = idx % 300
         fileNum = str(int(idx/300)) # maybe change filnum to string
@@ -105,6 +107,11 @@ class dlosDetectionDataset(Dataset):
         point_cloud = rgbd_to_pcd(depth_image)
         processedPointCloud = np.asarray(point_cloud.points)
         
+        # Do not use height for now
+        # if self.use_height:
+        #     floor_height = np.percentile(processedPointCloud[:,2], 0.99)
+        #     height = processedPointCloud[:,2] - floor_height
+        #     processedPointCloud
         
         # Calculating center, bounding box, and b-spline points at idx.
         Cable1 = np.load(os.path.join(self.raw_data_path, fileNum)+'/dlo_positions_1.npy')[depthNum, :, :] # 31, 3
@@ -113,9 +120,11 @@ class dlosDetectionDataset(Dataset):
         labelPointsCable1 = np.asarray(fitting.approximate_curve(Cable1.tolist(), degree=2, ctrlpts_size=5).ctrlpts)
         labelPointsCable2 = np.asarray(fitting.approximate_curve(Cable2.tolist(), degree=2, ctrlpts_size=5).ctrlpts)
         # Centers
+        labelCenters = np.zeros((MAX_NUM_OBJ,3))
         labelCenterCable1 = np.mean(labelPointsCable1, axis=0)
         labelCenterCable2 = np.mean(labelPointsCable2, axis=0)
-        labelCenters = np.vstack((labelPointsCable1, labelPointsCable2))
+        labelCenters[0] = labelCenterCable1
+        labelCenters[1] = labelCenterCable2
         # Bounding boxes
         maxCorner1 = np.max(labelPointsCable1, axis=0)
         minCorner1 = np.min(labelPointsCable1, axis=0)
@@ -129,7 +138,7 @@ class dlosDetectionDataset(Dataset):
 
         bboxes = np.vstack((bbox1, bbox2))
         # For debug print("How all boxes look like:", bboxes.shape)
-        
+
         # Size class
         sizeClasses = np.zeros((MAX_NUM_OBJ,))
         sizeResiduals = np.zeros((MAX_NUM_OBJ, 3))
@@ -138,22 +147,22 @@ class dlosDetectionDataset(Dataset):
 
         # Box label mask
         labelMask = np.zeros((MAX_NUM_OBJ))
-        labelMask[0:labelCenters.shape[0]] = 1
+        labelMask[0:bboxes.shape[0]] = 1
 
         # Vote label (not done)
         pointCloud, choices = pc_util.random_sampling(processedPointCloud, self.num_points, return_choices=True)
-        pointVotes = np.zeros((processedPointCloud.shape[0], 10))
+        pointVotes = np.zeros((processedPointCloud.shape[0], 4))
         # Check if a point is in a bounding box
         for point in range(processedPointCloud.shape[0]):
             for box in range(bboxes.shape[0]):
                 tempPoint = processedPointCloud[point] - bboxes[box,:3]
                 if not np.any(tempPoint < (-bboxes[box, 3:6])/2):
                     if not np.any(tempPoint > bboxes[box, 3:6]/2):
-                        pointVotes[point][0] = 1
-                        pointVotes[point][1:4] = bboxes[box,:3]
-        pointVotes = np.tile(pointVotes, (1, 3)) # From scannet dataloader
+                        pointVotes[point, 0] = 1
+                        pointVotes[point, 1:4] = bboxes[box,:3]
         pointVotesMask = pointVotes[choices, 0] # From sunrgbd dataloader
         pointVotes = pointVotes[choices, 1:] # From sunrgbd dataloader
+        pointVotes = np.tile(pointVotes, (1, 3)) # From scannet dataloader
 
         # Max boxes
         maxBboxes = np.zeros((MAX_NUM_OBJ, 8))
@@ -175,5 +184,19 @@ class dlosDetectionDataset(Dataset):
         ret_dict['vote_label_mask'] = pointVotesMask.astype(np.int64)
         ret_dict['scan_idx'] = np.array(idx).astype(np.int64)
         ret_dict['max_gt_bboxes'] = maxBboxes
+        # # Debug
+        # print("Debug:")
+        # print("point_cloud:", pointCloud.shape)
+        # print("center_label:", labelCenters.shape)
+        # print("heading_class_label:", np.zeros((MAX_NUM_OBJ,)).shape)
+        # print("heading_residual_label", np.zeros((MAX_NUM_OBJ,)).shape)
+        # print("size_class_label", sizeClasses.shape)
+        # print("size_residual_label", sizeResiduals.shape)
+        # print("sem_cls_label", target_bboxes_semcls.shape)
+        # print("box_label_mask", labelMask.shape)
+        # print("vote_label", pointVotes.shape)
+        # print("vote_label_mask", pointVotesMask.shape)
+        # print("scan_idx", np.array(idx).shape)
+        # print("max_gt_bboxes", maxBboxes.shape)
         
         return ret_dict

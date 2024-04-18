@@ -82,3 +82,87 @@ Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-obj
 Current learning rate: 0.001000
 Current BN decay momentum: 0.500000
 2024-04-18 12:50:44.538132
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=False, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 12:54:55.570182
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=False, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 13:09:02.665841
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=False, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 13:23:15.376481
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=False, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 13:44:50.748877
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=False, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 13:45:36.715656
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=True, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 13:52:07.397562
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=True, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 13:53:10.389427
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=True, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 13:57:05.663066
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=True, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 14:03:06.625136
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=True, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 14:05:47.401295
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=True, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 14:06:24.163339
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=True, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 14:10:51.962968
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=True, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 14:20:47.045315
+Namespace(DUMP_DIR='/repository/votenet_modified/Detecting-deformable-linear-objects-in-3D-point-clouds-using-deep-hough-voting/log_dlosFirstTest', ap_iou_thresh=0.25, batch_size=8, bn_decay_rate=0.5, bn_decay_step=20, checkpoint_path=None, cluster_sampling='vote_fps', dataset='dlos', dump_dir=None, dump_results=False, learning_rate=0.001, log_dir='log_dlosFirstTest', lr_decay_rates='0.1,0.1,0.1', lr_decay_steps='80,120,160', max_epoch=180, model='votenet', no_height=True, num_point=20000, num_target=256, overwrite=False, use_color=False, use_sunrgbd_v2=False, vote_factor=1, weight_decay=0)
+**** EPOCH 000 ****
+Current learning rate: 0.001000
+Current BN decay momentum: 0.500000
+2024-04-18 14:22:39.514726
+ ---- batch: 010 ----
+mean box_loss: 0.245872
+mean center_loss: 0.211154
+mean heading_cls_loss: 0.000000
+mean heading_reg_loss: 0.007359
+mean loss: 2.850310
+mean neg_ratio: 0.998437
+mean obj_acc: 0.939093
+mean objectness_loss: 0.078318
+mean pos_ratio: 0.000098
+mean sem_cls_loss: 0.000000
+mean size_cls_loss: 0.000000
+mean size_reg_loss: 0.027359
+mean vote_loss: 0.000000
