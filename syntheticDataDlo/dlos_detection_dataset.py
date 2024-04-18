@@ -128,7 +128,8 @@ class dlosDetectionDataset(Dataset):
         bbox2 = np.concatenate((labelCenterCable2, size2, 0, 0), axis=None) # angle forced to 0 and class to 0 (for class cable)
 
         bboxes = np.vstack((bbox1, bbox2))
-        print("How all boxes look like:", bboxes.shape)
+        # For debug print("How all boxes look like:", bboxes.shape)
+        
         # Size class
         sizeClasses = np.zeros((MAX_NUM_OBJ,))
         sizeResiduals = np.zeros((MAX_NUM_OBJ, 3))
