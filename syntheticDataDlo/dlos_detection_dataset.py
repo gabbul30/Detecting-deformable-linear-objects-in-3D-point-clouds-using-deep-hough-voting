@@ -63,7 +63,7 @@ def rgbd_to_pcd(img_depth):
 
 
 class dlosDetectionDataset(Dataset):
-    def __init__(self, split_set='train', num_points=20000,
+    def __init__(self, split_set='train', num_points=20000, # Since the point clouds have higher resoulution
         use_color=False, use_height=False, use_v1=False,
         augment=False, scan_idx_list=None):
 
@@ -72,7 +72,7 @@ class dlosDetectionDataset(Dataset):
         self.augment = augment
         self.use_height = use_height
         
-        self.scanNumbers = np.load(os.path.join(self.raw_data_path, (split_set + ".npy")))
+        self.scanNumbers = np.load(os.path.join(self.raw_data_path, (split_set + ".npy")))[:300]
        
     def __len__(self):
         return len(self.scanNumbers)
@@ -107,15 +107,18 @@ class dlosDetectionDataset(Dataset):
         point_cloud = rgbd_to_pcd(depth_image)
         processedPointCloud = np.asarray(point_cloud.points)
         
-        # Do not use height for now
-        # if self.use_height:
-        #     floor_height = np.percentile(processedPointCloud[:,2], 0.99)
+        # if self.use_height: # from sunrgbd Do not use height right now
+        #     floor_height = np.percentile(processedPointCloud[:,2],0.99)
         #     height = processedPointCloud[:,2] - floor_height
-        #     processedPointCloud
+        #     processedPointCloud = np.concatenate([processedPointCloud, np.expand_dims(height, 1)],1)
         
         # Calculating center, bounding box, and b-spline points at idx.
         Cable1 = np.load(os.path.join(self.raw_data_path, fileNum)+'/dlo_positions_1.npy')[depthNum, :, :] # 31, 3
         Cable2 = np.load(os.path.join(self.raw_data_path, fileNum)+'/dlo_positions_2.npy')[depthNum, :, :]
+        # Cables = np.dstack((Cable1, Cable2))
+        # Cables = Cables.transpose(2, 0, 1)
+        # print("Cable shapes:", Cables.shape) This does not work because cables can be both 30 and 31 points
+
         # Bspline points
         labelPointsCable1 = np.asarray(fitting.approximate_curve(Cable1.tolist(), degree=2, ctrlpts_size=5).ctrlpts)
         labelPointsCable2 = np.asarray(fitting.approximate_curve(Cable2.tolist(), degree=2, ctrlpts_size=5).ctrlpts)
@@ -151,18 +154,41 @@ class dlosDetectionDataset(Dataset):
 
         # Vote label (not done)
         pointCloud, choices = pc_util.random_sampling(processedPointCloud, self.num_points, return_choices=True)
-        pointVotes = np.zeros((processedPointCloud.shape[0], 4))
-        # Check if a point is in a bounding box
-        for point in range(processedPointCloud.shape[0]):
-            for box in range(bboxes.shape[0]):
-                tempPoint = processedPointCloud[point] - bboxes[box,:3]
-                if not np.any(tempPoint < (-bboxes[box, 3:6])/2):
-                    if not np.any(tempPoint > bboxes[box, 3:6]/2):
-                        pointVotes[point, 0] = 1
-                        pointVotes[point, 1:4] = bboxes[box,:3]
-        pointVotesMask = pointVotes[choices, 0] # From sunrgbd dataloader
-        pointVotes = pointVotes[choices, 1:] # From sunrgbd dataloader
-        pointVotes = np.tile(pointVotes, (1, 3)) # From scannet dataloader
+        pointVotes = np.zeros((pointCloud.shape[0], 4))
+        # Check if a point is in a bounding box (replaced by lower function due to too large volume compared to a cable)
+        # for point in range(processedPointCloud.shape[0]):
+        #     for box in range(bboxes.shape[0]):
+        #         tempPoint = processedPointCloud[point] - bboxes[box,:3]
+        #         if not np.any(tempPoint < (-bboxes[box, 3:6])/2):
+        #             if not np.any(tempPoint > bboxes[box, 3:6]/2):
+        #                 pointVotes[point, 0] = 1
+        #                 pointVotes[point, 1:4] = bboxes[box,:3]
+
+        #Check if close to cable points
+        for point in range(pointCloud.shape[0]):
+            # if point % 1000 == 0:
+            #     print("point:", point)                                   # 1.5 is a factor for increasing the distance to check for points, this can be used for wider cables where the representing points are closer to eachother then to the radius of the cable
+            controlDistance1 = np.linalg.norm(Cable1[0, :] - Cable1[1, :]) * 1.5 # The distance to check whether a point is so close to a "cable representation point" that it would belong to that cable
+            for cablePoint in range(Cable1.shape[0]):
+                if controlDistance1 > np.linalg.norm(Cable1[cablePoint, :] - pointCloud[point, :]):
+                    pointVotes[point, 0] = 1
+                    pointVotes[point, 1:4] = bboxes[0,:3]
+            
+            controlDistance2 = np.linalg.norm(Cable2[0, :] - Cable2[1, :]) * 1.5
+            for cablePoint in range(Cable2.shape[0]):
+                if controlDistance1 > np.linalg.norm(Cable2[cablePoint, :] - pointCloud[point, :]):
+                    pointVotes[point, 0] = 1
+                    pointVotes[point, 1:4] = bboxes[0,:3]
+            
+
+                    
+        # pointVotesMask = pointVotes[choices, 0] # From sunrgbd dataloader
+        # pointVotes = pointVotes[choices, 1:] # From sunrgbd dataloader
+        # pointVotes = np.tile(pointVotes, (1, 3)) # From scannet dataloader Original code but should be used when preprocessed is used
+        pointVotesMask = pointVotes[:, 0]
+        pointVotes = pointVotes[:, 1:]
+        pointVotes = np.tile(pointVotes, (1, 3))
+
 
         # Max boxes
         maxBboxes = np.zeros((MAX_NUM_OBJ, 8))
