@@ -72,7 +72,7 @@ class dlosDetectionDataset(Dataset):
         self.augment = augment
         self.use_height = use_height
         
-        self.scanNumbers = np.load(os.path.join(self.raw_data_path, (split_set + ".npy")))[:300]
+        self.scanNumbers = np.load(os.path.join(self.raw_data_path, (split_set + ".npy")))[:200]
        
     def __len__(self):
         return len(self.scanNumbers)
@@ -140,7 +140,7 @@ class dlosDetectionDataset(Dataset):
         bbox2 = np.concatenate((labelCenterCable2, size2, 0, 0), axis=None) # angle forced to 0 and class to 0 (for class cable)
 
         bboxes = np.vstack((bbox1, bbox2))
-        # For debug print("How all boxes look like:", bboxes.shape)
+        # for debug print("How all boxes look like:", bboxes.shape)
 
         # Size class
         sizeClasses = np.zeros((MAX_NUM_OBJ,))
@@ -167,18 +167,20 @@ class dlosDetectionDataset(Dataset):
         #Check if close to cable points
         for point in range(pointCloud.shape[0]):
             # if point % 1000 == 0:
-            #     print("point:", point)                                   # 1.5 is a factor for increasing the distance to check for points, this can be used for wider cables where the representing points are closer to eachother then to the radius of the cable
-            controlDistance1 = np.linalg.norm(Cable1[0, :] - Cable1[1, :]) * 1.5 # The distance to check whether a point is so close to a "cable representation point" that it would belong to that cable
+            #     print("point:", point)                                   # 0.5 is a factor for the distance to check for points, this can be used for wider cables where the representing points are closer to eachother then to the radius of the cable
+            controlDistance1 = np.linalg.norm(Cable1[0, :] - Cable1[1, :]) * 0.5 # The distance to check whether a point is so close to a "cable representation point" that it would belong to that cable
             for cablePoint in range(Cable1.shape[0]):
                 if controlDistance1 > np.linalg.norm(Cable1[cablePoint, :] - pointCloud[point, :]):
                     pointVotes[point, 0] = 1
-                    pointVotes[point, 1:4] = bboxes[0,:3]
+                    pointVotes[point, 1:4] = labelCenterCable1
+                    #print("points found")
             
-            controlDistance2 = np.linalg.norm(Cable2[0, :] - Cable2[1, :]) * 1.5
+            controlDistance2 = np.linalg.norm(Cable2[0, :] - Cable2[1, :]) * 0.5
             for cablePoint in range(Cable2.shape[0]):
-                if controlDistance1 > np.linalg.norm(Cable2[cablePoint, :] - pointCloud[point, :]):
+                if controlDistance2 > np.linalg.norm(Cable2[cablePoint, :] - pointCloud[point, :]):
                     pointVotes[point, 0] = 1
-                    pointVotes[point, 1:4] = bboxes[0,:3]
+                    pointVotes[point, 1:4] = labelCenterCable2
+                    #print("points found2")
             
 
                     

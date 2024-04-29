@@ -237,7 +237,8 @@ def get_loss(end_points, config):
     end_points['box_loss'] = box_loss
 
     # Final loss function
-    loss = vote_loss + 0.5*objectness_loss + box_loss + 0.1*sem_cls_loss
+    loss = vote_loss + 0.5*objectness_loss + box_loss + 0.0*sem_cls_loss # sem_cls_loss set to 
+    #loss = vote_loss + objectness_loss + center_loss + 0.1*size_cls_loss + size_reg_loss
     loss *= 10
     end_points['loss'] = loss
 
