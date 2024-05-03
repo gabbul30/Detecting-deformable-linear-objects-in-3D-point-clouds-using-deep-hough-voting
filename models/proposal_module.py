@@ -40,8 +40,18 @@ def decode_scores(net, end_points, num_class, num_heading_bin, num_size_cluster,
     end_points['size_residuals_normalized'] = size_residuals_normalized
     end_points['size_residuals'] = size_residuals_normalized * torch.from_numpy(mean_size_arr.astype(np.float32)).cuda().unsqueeze(0).unsqueeze(0)
 
-    sem_cls_scores = net_transposed[:,:,5+num_heading_bin*2+num_size_cluster*4:] # Bxnum_proposalx10
+    sem_cls_scores = net_transposed[:,:,5+num_heading_bin*2+num_size_cluster*4:5+num_heading_bin*2+num_size_cluster*4+num_class] # Bxnum_proposalx10
     end_points['sem_cls_scores'] = sem_cls_scores
+
+    # NOTE the module calculates the offset from the object center to the points and not their direct geometric points in the point cloud
+    b_spline_points = net_transposed[:,:,5+num_heading_bin*2+num_size_cluster*4+num_class:]
+    b_spline_points[:, :, 0:3] = b_spline_points[:, :, 0:3] + center
+    b_spline_points[:, :, 3:6] = b_spline_points[:, :, 3:6] + center
+    b_spline_points[:, :, 6:9] = b_spline_points[:, :, 6:9] + center
+    b_spline_points[:, :, 9:12] = b_spline_points[:, :, 9:12] + center
+    b_spline_points[:, :, 12:15] = b_spline_points[:, :, 12:15] + center
+
+    end_points['bSplinePoints'] = b_spline_points
 
     # keys = list(end_points)
     # print("KEYS:")
@@ -79,7 +89,7 @@ class ProposalModule(nn.Module):
         # heading class+residual (num_heading_bin*2), size class+residual(num_size_cluster*4)
         self.conv1 = torch.nn.Conv1d(128,128,1)
         self.conv2 = torch.nn.Conv1d(128,128,1)
-        self.conv3 = torch.nn.Conv1d(128,2+3+num_heading_bin*2+num_size_cluster*4+self.num_class,1)
+        self.conv3 = torch.nn.Conv1d(128,2+3+num_heading_bin*2+num_size_cluster*4+self.num_class + 15,1)
         self.bn1 = torch.nn.BatchNorm1d(128)
         self.bn2 = torch.nn.BatchNorm1d(128)
 

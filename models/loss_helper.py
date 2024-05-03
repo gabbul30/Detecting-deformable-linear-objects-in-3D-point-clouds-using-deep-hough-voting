@@ -142,6 +142,23 @@ def compute_box_and_sem_cls_loss(end_points, config):
         torch.sum(dist2*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
     center_loss = centroid_reg_loss1 + centroid_reg_loss2
 
+    # Compute b-spline loss (Calculated like center loss with regression loss absolut values instead)
+    pred_bspline = end_points['bSplinePoints']
+    control_points = end_points['controlPoints']
+    _, _, distCablePoint1, _ = nn_distance(pred_bspline[:,:,0:3], control_points[:,:,0:3], l1=True)
+    _, _, distCablePoint2, _ = nn_distance(pred_bspline[:,:,3:6], control_points[:,:,3:6], l1=True)
+    _, _, distCablePoint3, _ = nn_distance(pred_bspline[:,:,6:9], control_points[:,:,6:9], l1=True)
+    _, _, distCablePoint4, _ = nn_distance(pred_bspline[:,:,9:12], control_points[:,:,9:12], l1=True)
+    _, _, distCablePoint5, _ = nn_distance(pred_bspline[:,:,12:15], control_points[:,:,12:15], l1=True)
+
+    regLossCablePoint1 = torch.sum(distCablePoint1*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    regLossCablePoint2 = torch.sum(distCablePoint2*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    regLossCablePoint3 = torch.sum(distCablePoint3*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    regLossCablePoint4 = torch.sum(distCablePoint4*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    regLossCablePoint5 = torch.sum(distCablePoint5*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    controlPointsLoss = (regLossCablePoint1 + regLossCablePoint2 + regLossCablePoint3 + regLossCablePoint4 + regLossCablePoint5)/5
+
+
     # Compute heading loss
     heading_class_label = torch.gather(end_points['heading_class_label'], 1, object_assignment) # select (B,K) from (B,K2)
     criterion_heading_class = nn.CrossEntropyLoss(reduction='none')
@@ -181,7 +198,7 @@ def compute_box_and_sem_cls_loss(end_points, config):
     sem_cls_loss = criterion_sem_cls(end_points['sem_cls_scores'].transpose(2,1), sem_cls_label) # (B,K)
     sem_cls_loss = torch.sum(sem_cls_loss * objectness_label)/(torch.sum(objectness_label)+1e-6)
 
-    return center_loss, heading_class_loss, heading_residual_normalized_loss, size_class_loss, size_residual_normalized_loss, sem_cls_loss
+    return center_loss, heading_class_loss, heading_residual_normalized_loss, size_class_loss, size_residual_normalized_loss, sem_cls_loss, controlPointsLoss
 
 def get_loss(end_points, config):
     """ Loss functions
@@ -225,7 +242,7 @@ def get_loss(end_points, config):
         torch.sum(objectness_mask.float())/float(total_num_proposal) - end_points['pos_ratio']
 
     # Box loss and sem cls loss
-    center_loss, heading_cls_loss, heading_reg_loss, size_cls_loss, size_reg_loss, sem_cls_loss = \
+    center_loss, heading_cls_loss, heading_reg_loss, size_cls_loss, size_reg_loss, sem_cls_loss, controlPointsLoss = \
         compute_box_and_sem_cls_loss(end_points, config)
     end_points['center_loss'] = center_loss
     end_points['heading_cls_loss'] = heading_cls_loss
@@ -233,12 +250,14 @@ def get_loss(end_points, config):
     end_points['size_cls_loss'] = size_cls_loss
     end_points['size_reg_loss'] = size_reg_loss
     end_points['sem_cls_loss'] = sem_cls_loss
+
+    end_points['control_pts_loss'] = controlPointsLoss
+
     box_loss = center_loss + 0.1*heading_cls_loss + heading_reg_loss + 0.1*size_cls_loss + size_reg_loss
     end_points['box_loss'] = box_loss
 
     # Final loss function
-    loss = vote_loss + 0.5*objectness_loss + box_loss + 0.0*sem_cls_loss # sem_cls_loss set to zero
-    #loss = vote_loss + objectness_loss + center_loss + 0.1*size_cls_loss + size_reg_loss
+    loss = vote_loss + 0.5*objectness_loss + box_loss + 0.0*sem_cls_loss + 0.2*controlPointsLoss # sem_cls_loss set to zero
     loss *= 10
     end_points['loss'] = loss
 

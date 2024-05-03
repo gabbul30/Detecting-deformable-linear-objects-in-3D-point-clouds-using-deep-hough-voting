@@ -115,6 +115,11 @@ class dlosDetectionDataset(Dataset):
         labelCenters[0] = labelCenterCable1
         labelCenters[1] = labelCenterCable2
 
+        # ControlPoints label (bSpline)
+        controlPoints = np.zeros((MAX_NUM_OBJ,15))
+        controlPoints[0] = labelPointsCable1.reshape((15))
+        controlPoints[1] = labelPointsCable2.reshape((15))
+
         # Bounding boxes
         maxCorner1 = np.max(labelPointsCable1, axis=0)
         minCorner1 = np.min(labelPointsCable1, axis=0)
@@ -158,6 +163,7 @@ class dlosDetectionDataset(Dataset):
         ret_dict = {}
         ret_dict['point_clouds'] = pointCloud.astype(np.float32)
         ret_dict['center_label'] = labelCenters.astype(np.float32)
+        ret_dict['controlPoints'] = controlPoints.astype(np.float32)
         ret_dict['heading_class_label'] = np.zeros((MAX_NUM_OBJ,)).astype(np.int64)
         ret_dict['heading_residual_label'] = np.zeros((MAX_NUM_OBJ,)).astype(np.float32)
         ret_dict['size_class_label'] = sizeClasses.astype(np.int64)
