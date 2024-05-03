@@ -62,13 +62,19 @@ def nn_distance(pc1, pc2, l1smooth=False, delta=1.0, l1=False):
 
 def demo_nn_distance():
     np.random.seed(0)
-    pc1arr = np.random.random((1,5,3))
-    pc2arr = np.random.random((1,6,3))
+    # pc1arr = np.random.random((1,5,3))
+    # pc2arr = np.random.random((1,6,3))
+    pc1arr = np.array([[[0,3,4],
+                        [0,-1,-1]]])
+    pc2arr = np.array([[[0,0,0]]])
+    
     pc1 = torch.from_numpy(pc1arr.astype(np.float32))
     pc2 = torch.from_numpy(pc2arr.astype(np.float32))
-    dist1, idx1, dist2, idx2 = nn_distance(pc1, pc2)
+    dist1, idx1, dist2, idx2 = nn_distance(pc1, pc2, l1=True)
     print(dist1)
     print(idx1)
+    print(dist2)
+    print(idx2)
     dist = np.zeros((5,6))
     for i in range(5):
         for j in range(6):
@@ -76,7 +82,7 @@ def demo_nn_distance():
     print(dist)
     print('-'*30)
     print('L1smooth dists:')
-    dist1, idx1, dist2, idx2 = nn_distance(pc1, pc2, True)
+    dist1, idx1, dist2, idx2 = nn_distance(pc1, pc2, False)
     print(dist1)
     print(idx1)
     dist = np.zeros((5,6))
