@@ -13,8 +13,8 @@ ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 from nn_distance import nn_distance, huber_loss
 
-FAR_THRESHOLD = 0.6
-NEAR_THRESHOLD = 0.3
+FAR_THRESHOLD = 0.4 # Changed from 0.6
+NEAR_THRESHOLD = 0.2 # Changed from 0.3
 GT_VOTE_FACTOR = 3 # number of GT votes per point
 OBJECTNESS_CLS_WEIGHTS = [0.2,0.8] # put larger weights on positive objectness
 
@@ -142,20 +142,37 @@ def compute_box_and_sem_cls_loss(end_points, config):
         torch.sum(dist2*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
     center_loss = centroid_reg_loss1 + centroid_reg_loss2
 
-    # Compute b-spline loss (Calculated like center loss with regression loss absolut values instead)
+    # Compute control points loss (Calculated like center loss with absolute values instead)
     pred_bspline = end_points['bSplinePoints']
     control_points = end_points['controlPoints']
-    _, _, distCablePoint1, _ = nn_distance(pred_bspline[:,:,0:3], control_points[:,:,0:3], l1=True)
-    _, _, distCablePoint2, _ = nn_distance(pred_bspline[:,:,3:6], control_points[:,:,3:6], l1=True)
-    _, _, distCablePoint3, _ = nn_distance(pred_bspline[:,:,6:9], control_points[:,:,6:9], l1=True)
-    _, _, distCablePoint4, _ = nn_distance(pred_bspline[:,:,9:12], control_points[:,:,9:12], l1=True)
-    _, _, distCablePoint5, _ = nn_distance(pred_bspline[:,:,12:15], control_points[:,:,12:15], l1=True)
 
-    regLossCablePoint1 = torch.sum(distCablePoint1*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
-    regLossCablePoint2 = torch.sum(distCablePoint2*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
-    regLossCablePoint3 = torch.sum(distCablePoint3*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
-    regLossCablePoint4 = torch.sum(distCablePoint4*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
-    regLossCablePoint5 = torch.sum(distCablePoint5*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    dist1CablePoint1, _, dist2CablePoint1, _ = nn_distance(pred_bspline[:,:,0:3], control_points[:,:,0:3], l1=True)
+    dist1CablePoint2, _, dist2CablePoint2, _ = nn_distance(pred_bspline[:,:,3:6], control_points[:,:,3:6], l1=True)
+    dist1CablePoint3, _, dist2CablePoint3, _ = nn_distance(pred_bspline[:,:,6:9], control_points[:,:,6:9], l1=True)
+    dist1CablePoint4, _, dist2CablePoint4, _ = nn_distance(pred_bspline[:,:,9:12], control_points[:,:,9:12], l1=True)
+    dist1CablePoint5, _, dist2CablePoint5, _ = nn_distance(pred_bspline[:,:,12:15], control_points[:,:,12:15], l1=True)
+
+    revDist1CablePoint1, _, revDist2CablePoint1, _ = nn_distance(pred_bspline[:,:,12:15], control_points[:,:,0:3], l1=True)
+    revDist1CablePoint2, _, revDist2CablePoint2, _ = nn_distance(pred_bspline[:,:,9:12], control_points[:,:,3:6], l1=True)
+    revDist1CablePoint3, _, revDist2CablePoint3, _ = nn_distance(pred_bspline[:,:,6:9], control_points[:,:,6:9], l1=True)
+    revDist1CablePoint4, _, revDist2CablePoint4, _ = nn_distance(pred_bspline[:,:,3:6], control_points[:,:,9:12], l1=True)
+    revDist1CablePoint5, _, revDist2CablePoint5, _ = nn_distance(pred_bspline[:,:,0:3], control_points[:,:,12:15], l1=True)
+
+
+    # get lowest control points loss looking from both directions of a dlo 
+    dist1CablePoints = torch.stack((dist1CablePoint1,dist1CablePoint2,dist1CablePoint3,dist1CablePoint4,dist1CablePoint5),dim=2)
+    revDist1CablePoints = torch.stack((revDist1CablePoint1,revDist1CablePoint2,revDist1CablePoint3,revDist1CablePoint4,revDist1CablePoint5),dim=2)
+
+    mask = torch.sum(dist1CablePoints,dim=2) > torch.sum(revDist1CablePoints,dim=2)
+    dist1CablePoints[mask] = revDist1CablePoints[mask]
+    #print(f"{mask[0,0]},{torch.sum(dist1CablePoints[0,0,:])},{torch.sum(revDist1CablePoints[0,0,:])}") Debug
+    
+    regLossCablePoint1 = torch.sum(dist1CablePoints[:,:,0]*objectness_label)/(torch.sum(objectness_label)+1e-6)# + torch.sum(dist2CablePoint1*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    regLossCablePoint2 = torch.sum(dist1CablePoints[:,:,1]*objectness_label)/(torch.sum(objectness_label)+1e-6)# + torch.sum(dist2CablePoint2*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    regLossCablePoint3 = torch.sum(dist1CablePoints[:,:,2]*objectness_label)/(torch.sum(objectness_label)+1e-6)# + torch.sum(dist2CablePoint3*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    regLossCablePoint4 = torch.sum(dist1CablePoints[:,:,3]*objectness_label)/(torch.sum(objectness_label)+1e-6)# + torch.sum(dist2CablePoint4*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    regLossCablePoint5 = torch.sum(dist1CablePoints[:,:,4]*objectness_label)/(torch.sum(objectness_label)+1e-6)# + torch.sum(dist2CablePoint5*box_label_mask)/(torch.sum(box_label_mask)+1e-6)
+    
     controlPointsLoss = (regLossCablePoint1 + regLossCablePoint2 + regLossCablePoint3 + regLossCablePoint4 + regLossCablePoint5)/5
 
 
@@ -257,7 +274,8 @@ def get_loss(end_points, config):
     end_points['box_loss'] = box_loss
 
     # Final loss function
-    loss = vote_loss + 0.5*objectness_loss + box_loss + 0.0*sem_cls_loss + 0.2*controlPointsLoss # sem_cls_loss set to zero
+    #loss = vote_loss + 0.5*objectness_loss + box_loss + 0.0*sem_cls_loss + 0.3*controlPointsLoss # sem_cls_loss set to zero
+    loss = vote_loss + 0.5*objectness_loss + center_loss + 0.3*controlPointsLoss
     loss *= 10
     end_points['loss'] = loss
 

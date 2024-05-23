@@ -20,7 +20,7 @@ class dlosDatasetConfig(object):
         self.type2class={'cable':0}
         self.class2type = {self.type2class[t]:t for t in self.type2class}
         self.type2onehotclass={'cable':0}
-        self.type_mean_size = {'cable': np.array([0.47283101, 0.73031445, 0.18585697])}
+        self.type_mean_size = {'cable': np.array([0.48322565, 0.66432735, 0.25044023])}
 
         self.mean_size_arr = np.zeros((self.num_size_cluster, 3))
         for i in range(self.num_size_cluster):

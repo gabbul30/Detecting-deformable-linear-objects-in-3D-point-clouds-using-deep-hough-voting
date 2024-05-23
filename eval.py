@@ -138,11 +138,26 @@ CONFIG_DICT = {'remove_empty_box': (not FLAGS.faster_eval), 'use_3d_nms': FLAGS.
     'conf_thresh': FLAGS.conf_thresh, 'dataset_config':DATASET_CONFIG}
 # ------------------------------------------------------------------------- GLOBAL CONFIG END
 
+# Objectness prob from dump helper, softmax
+def softmax(x):
+    ''' Numpy function for softmax'''
+    shape = x.shape
+    probs = np.exp(x - np.max(x, axis=len(shape)-1, keepdims=True))
+    probs /= np.sum(probs, axis=len(shape)-1, keepdims=True)
+    return probs
+
+
 def evaluate_one_epoch():
     stat_dict = {}
     ap_calculator_list = [APCalculator(iou_thresh, DATASET_CONFIG.class2type) \
         for iou_thresh in AP_IOU_THRESHOLDS]
     net.eval() # set model to eval mode (for bn and dp)
+
+    # Used for the accuracy of detecting DLOs
+    totalObjects = 0
+    detectedObjects = 0
+    allDetectedDistances = np.zeros(5)
+
     for batch_idx, batch_data_label in enumerate(TEST_DATALOADER):
         if batch_idx % 10 == 0:
             print('Eval batch: %d'%(batch_idx))
@@ -174,6 +189,76 @@ def evaluate_one_epoch():
         # Dump evaluation results for visualization
         if batch_idx == 0:
             MODEL.dump_results(end_points, DUMP_DIR, DATASET_CONFIG)
+
+        # calculate dlos accuracy
+        confidence_threshold = 0.50
+        objectness_scores = end_points['objectness_scores'].detach().cpu().numpy()
+        pred_bspline = end_points['bSplinePoints'].detach().cpu().numpy()
+        control_points = end_points['controlPoints'].detach().cpu().numpy()
+        objectLabel = end_points['box_label_mask'].detach().cpu().numpy()
+        pred_mask = end_points['pred_mask']
+
+        for scene in range(BATCH_SIZE): # For every scene in a batch
+            # From dump helper
+            objectness_prob = softmax(objectness_scores[scene,:,:])[:,1]
+
+            # Debug
+            # print("Bspline confident shape:", pred_bspline[scene,np.logical_and(objectness_prob>confidence_threshold, pred_mask[scene,:]==1),:].shape)
+
+            # Used to track if an object is detected, 1 if an object has a detected status, 0 if not detected.
+            numObjectsInScene = int(np.sum(objectLabel[scene,:]))
+            detected = np.zeros(numObjectsInScene)
+
+            confident_predictions = pred_bspline[scene,np.logical_and(objectness_prob>confidence_threshold, pred_mask[scene,:]==1),:]
+            for pred in range(confident_predictions.shape[0]):# For each prediction, check distances to ground truths.
+
+                closestToGT = 0 # To keep track of which ground truth the prediction is closest to
+                closestDistance = np.zeros(5) # Distances from predicted points to gt
+
+                for gt in range(numObjectsInScene): # To iterate through all objects in a scene.
+                    distance = np.zeros(5)
+                    revDistance = np.zeros(5)
+                    
+                    prediction = confident_predictions[pred, :].reshape((5,3))
+                    revPrediction = np.flip(prediction, axis=0)
+
+                    groundtruth = control_points[scene, gt, :].reshape((5,3))
+
+                    for point in range(5): # for each point in a DLO
+                        distance[point] = np.linalg.norm(prediction[point,:] - groundtruth[point,:]) # Test one direction of the DLO
+                        revDistance[point] = np.linalg.norm(revPrediction[point,:] - groundtruth[point,:]) # Test the other direction
+
+                    if np.sum(distance) > np.sum(revDistance): # The shortest distance stored in "distance"
+                        distance = revDistance
+
+                    if gt == 0:
+                        closestDistance = distance
+                    else:
+                        if np.sum(distance) < np.sum(closestDistance):
+                            closestToGT = gt
+                            closestDistance = distance
+                
+                detected[closestToGT] = 1
+                if batch_idx == 0 and scene == 0 and pred == 0:
+                    allDetectedDistances = closestDistance
+                else:
+                    allDetectedDistances = np.vstack((allDetectedDistances,closestDistance))
+            
+            totalObjects = totalObjects + numObjectsInScene
+            detectedObjects = detectedObjects + int(np.sum(detected))
+            print("Total objects:", totalObjects)
+            print("Detected objects", detectedObjects)
+            print("Shape of allDetectedDistances", allDetectedDistances.shape)
+        print("All allDetectedDistances after scene", allDetectedDistances)
+                
+
+
+
+    # Print accuracy!
+
+
+
+
 
     # Log statistics
     for key in sorted(stat_dict.keys()):
