@@ -15,6 +15,8 @@ import importlib
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import matplotlib.pyplot as plt
+import time
 from torch.utils.data import DataLoader
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
@@ -157,6 +159,7 @@ def evaluate_one_epoch():
     totalObjects = 0
     detectedObjects = 0
     allDetectedDistances = np.zeros(5)
+    forwardPassTimes = []
 
     for batch_idx, batch_data_label in enumerate(TEST_DATALOADER):
         if batch_idx % 10 == 0:
@@ -166,8 +169,17 @@ def evaluate_one_epoch():
         
         # Forward pass
         inputs = {'point_clouds': batch_data_label['point_clouds']}
+
+        if inputs['point_clouds'].shape[0] == 8:
+            forwardPassTime = time.time()
+
         with torch.no_grad():
             end_points = net(inputs)
+
+        if inputs['point_clouds'].shape[0] == 8:
+            forwardPassTimes.append(time.time() - forwardPassTime)
+            print("forward pass time:", forwardPassTimes[batch_idx])
+
 
         # Compute loss
         for key in batch_data_label:
@@ -198,7 +210,7 @@ def evaluate_one_epoch():
         objectLabel = end_points['box_label_mask'].detach().cpu().numpy()
         pred_mask = end_points['pred_mask']
 
-        for scene in range(BATCH_SIZE): # For every scene in a batch
+        for scene in range(control_points.shape[0]): # For every scene in a batch
             # From dump helper
             objectness_prob = softmax(objectness_scores[scene,:,:])[:,1]
 
@@ -246,30 +258,52 @@ def evaluate_one_epoch():
             
             totalObjects = totalObjects + numObjectsInScene
             detectedObjects = detectedObjects + int(np.sum(detected))
-            print("Total objects:", totalObjects)
-            print("Detected objects", detectedObjects)
-            print("Shape of allDetectedDistances", allDetectedDistances.shape)
-        print("All allDetectedDistances after scene", allDetectedDistances)
+        #     print("Total objects:", totalObjects) For debugging
+        #     print("Detected objects", detectedObjects)
+        #     print("Shape of allDetectedDistances", allDetectedDistances.shape)
+        # print("All allDetectedDistances after scene", allDetectedDistances)
                 
 
-
-
     # Print accuracy!
+    print(f"\nOut of {totalObjects} DLOs, {detectedObjects} DLOs were detected from {allDetectedDistances.shape[0]} predictions\ngiving the model a DLO detection rate of {detectedObjects/totalObjects}")
+    print(f"\n========Statistics from predicted points========")
+    print("\nDistance from predicted points to control points is")
+    print("The mean:", np.mean(allDetectedDistances))
+    print("The standard deviation:", np.std(allDetectedDistances))
+    print("The median:", np.median(allDetectedDistances))
+
+    plt.scatter(np.arange(allDetectedDistances.shape[0]),np.mean(allDetectedDistances, axis=1),c="green")
+    plt.title("Mean")
+    plt.show()
+
+    plt.scatter(np.arange(allDetectedDistances.shape[0]),np.sort(np.mean(allDetectedDistances, axis=1)),c="green")
+    plt.title("Mean sorted")
+    plt.show()
+    
+    print("\nDistance for each closest control point prediction for each DLO is")
+    print("The mean:", np.mean(np.min(allDetectedDistances,axis=1)))
+    print("The standard deviation:", np.std(np.min(allDetectedDistances,axis=1)))
+    print("The median:", np.median(np.min(allDetectedDistances,axis=1)))
+
+    plt.hist(np.mean(allDetectedDistances, axis=1),bins=40)
+    plt.title("Mean histogram")
+    plt.show()
+
+    print("Avarage time for a forward pass with a batch size of 8:", np.mean(forwardPassTimes))
 
 
 
-
-
+    #  For standard object detection
     # Log statistics
-    for key in sorted(stat_dict.keys()):
-        log_string('eval mean %s: %f'%(key, stat_dict[key]/(float(batch_idx+1))))
+    # for key in sorted(stat_dict.keys()):
+    #     log_string('eval mean %s: %f'%(key, stat_dict[key]/(float(batch_idx+1))))
 
-    # Evaluate average precision
-    for i, ap_calculator in enumerate(ap_calculator_list):
-        print('-'*10, 'iou_thresh: %f'%(AP_IOU_THRESHOLDS[i]), '-'*10)
-        metrics_dict = ap_calculator.compute_metrics()
-        for key in metrics_dict:
-            log_string('eval %s: %f'%(key, metrics_dict[key]))
+    # # Evaluate average precision
+    # for i, ap_calculator in enumerate(ap_calculator_list):
+    #     print('-'*10, 'iou_thresh: %f'%(AP_IOU_THRESHOLDS[i]), '-'*10)
+    #     metrics_dict = ap_calculator.compute_metrics()
+    #     for key in metrics_dict:
+    #         log_string('eval %s: %f'%(key, metrics_dict[key]))
 
     mean_loss = stat_dict['loss']/float(batch_idx+1)
     return mean_loss
