@@ -21,7 +21,7 @@ This includes three main inputs:
 
 These can all be generated with the "processDlosData.py" script which has DLO segments and a depth image as input. Note that in the project, 2 DLOs were used in each scene and if there are not 2 DLOs in each scene, some further modifications would be required to at least the preparation script for the data and the dataloader.
 
-There would also have to be a train/test split on the data where I would refer to the dataloader (dlos_detection_dataset.py + model_util_dlos.py)
+There would also have to be a train/test split on the data where I would refer to the dataloader (dlos_detection_dataset.py + model_util_dlos.py) and also the train test split (trainTestSplit.py).
 
 ## Training and testing
 To train a model, use the following command:
