@@ -8,12 +8,12 @@ The paper for the project:
 https://urn.kb.se/resolve?urn=urn:nbn:se:oru:diva-115235
 
 ## Setup
-For the setup and dependencies, there is no difference from the setup and dependencies of the original repository, the only exception being, is that geomdl was added and latest version of tensorboard was added for visualization of loss curves during training.
+For the setup and dependencies a docker file is included in the "docker" folder which contains all the libraries nessesary to run this repository. In the same folder, all python modules with their versions are also listed in "pythonModulesAndVersions.txt". For tensorboard to work, the latest version of tensorboard was used during the project.
 
-For setup, I suggest following the original README, which is included.
+For the rest of the setup, I suggest following the original README, which is included.
 
 ## Data preparation
-The input data for training and testing needs to be prepared a bit different from the original VoteNet.
+The input data for training and testing needs to be prepared different from the original VoteNet.
 This includes three main inputs:
 * The point cloud of a scene. (NumPoints, 3)
 * The "bSplinePoints" (NumObj, 15, 3) which are the control points generated from the curve of a deformable linear object.
@@ -36,4 +36,4 @@ To test and evaluate the model, use the following command:
 
 These commands only differ from the original commands included in the original README by using the --no_height flag and using "dlos" as dataset. "dlos" uses the custom dataloader made for the project. "sunrgbd" and "scannet" will not work because they are not compatible with the modifications done to the algorithm. The accuracy used in the evaluation is described in the paper for this project.
 
-For visualizing and comparing predictions to groud truth dlos from the dumpDir, a python script is included too in the evals folder.
+For visualizing and comparing predictions to groud truth dlos from the dumpDir, a python script is included too in the "evals" folder.
