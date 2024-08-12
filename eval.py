@@ -15,6 +15,8 @@ import importlib
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import matplotlib.pyplot as plt
+import time
 from torch.utils.data import DataLoader
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
@@ -26,7 +28,7 @@ parser.add_argument('--model', default='votenet', help='Model file name [default
 parser.add_argument('--dataset', default='sunrgbd', help='Dataset name. sunrgbd or scannet. [default: sunrgbd]')
 parser.add_argument('--checkpoint_path', default=None, help='Model checkpoint path [default: None]')
 parser.add_argument('--dump_dir', default=None, help='Dump dir to save sample outputs [default: None]')
-parser.add_argument('--num_point', type=int, default=20000, help='Point Number [default: 20000]')
+parser.add_argument('--num_point', type=int, default=10000, help='Point Number [default: 20000]')
 parser.add_argument('--num_target', type=int, default=256, help='Point Number [default: 256]')
 parser.add_argument('--batch_size', type=int, default=8, help='Batch Size during training [default: 8]')
 parser.add_argument('--vote_factor', type=int, default=1, help='Number of votes generated from each seed [default: 1]')
@@ -86,6 +88,13 @@ elif FLAGS.dataset == 'scannet':
     TEST_DATASET = ScannetDetectionDataset('val', num_points=NUM_POINT,
         augment=False,
         use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
+elif FLAGS.dataset == 'dlos':
+    sys.path.append(os.path.join(ROOT_DIR, 'syntheticDataDlo'))
+    from dlos_detection_dataset import dlosDetectionDataset, MAX_NUM_OBJ
+    from model_util_dlos import dlosDatasetConfig
+    DATASET_CONFIG = dlosDatasetConfig()
+    TEST_DATASET = dlosDetectionDataset('test', num_points=NUM_POINT,
+        augment=False, use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
 else:
     print('Unknown dataset %s. Exiting...'%(FLAGS.dataset))
     exit(-1)
@@ -131,11 +140,27 @@ CONFIG_DICT = {'remove_empty_box': (not FLAGS.faster_eval), 'use_3d_nms': FLAGS.
     'conf_thresh': FLAGS.conf_thresh, 'dataset_config':DATASET_CONFIG}
 # ------------------------------------------------------------------------- GLOBAL CONFIG END
 
+# Objectness prob from dump helper, softmax
+def softmax(x):
+    ''' Numpy function for softmax'''
+    shape = x.shape
+    probs = np.exp(x - np.max(x, axis=len(shape)-1, keepdims=True))
+    probs /= np.sum(probs, axis=len(shape)-1, keepdims=True)
+    return probs
+
+
 def evaluate_one_epoch():
     stat_dict = {}
     ap_calculator_list = [APCalculator(iou_thresh, DATASET_CONFIG.class2type) \
         for iou_thresh in AP_IOU_THRESHOLDS]
     net.eval() # set model to eval mode (for bn and dp)
+
+    # Used for the accuracy of detecting DLOs
+    totalObjects = 0
+    detectedObjects = 0
+    allDetectedDistances = np.zeros(5)
+    forwardPassTimes = []
+
     for batch_idx, batch_data_label in enumerate(TEST_DATALOADER):
         if batch_idx % 10 == 0:
             print('Eval batch: %d'%(batch_idx))
@@ -144,8 +169,17 @@ def evaluate_one_epoch():
         
         # Forward pass
         inputs = {'point_clouds': batch_data_label['point_clouds']}
+
+        if inputs['point_clouds'].shape[0] == 8:
+            forwardPassTime = time.time()
+
         with torch.no_grad():
             end_points = net(inputs)
+
+        if inputs['point_clouds'].shape[0] == 8:
+            forwardPassTimes.append(time.time() - forwardPassTime)
+            print("forward pass time:", forwardPassTimes[batch_idx])
+
 
         # Compute loss
         for key in batch_data_label:
@@ -168,16 +202,108 @@ def evaluate_one_epoch():
         if batch_idx == 0:
             MODEL.dump_results(end_points, DUMP_DIR, DATASET_CONFIG)
 
-    # Log statistics
-    for key in sorted(stat_dict.keys()):
-        log_string('eval mean %s: %f'%(key, stat_dict[key]/(float(batch_idx+1))))
+        # calculate dlos accuracy
+        confidence_threshold = 0.50
+        objectness_scores = end_points['objectness_scores'].detach().cpu().numpy()
+        pred_bspline = end_points['bSplinePoints'].detach().cpu().numpy()
+        control_points = end_points['controlPoints'].detach().cpu().numpy()
+        objectLabel = end_points['box_label_mask'].detach().cpu().numpy()
+        pred_mask = end_points['pred_mask']
 
-    # Evaluate average precision
-    for i, ap_calculator in enumerate(ap_calculator_list):
-        print('-'*10, 'iou_thresh: %f'%(AP_IOU_THRESHOLDS[i]), '-'*10)
-        metrics_dict = ap_calculator.compute_metrics()
-        for key in metrics_dict:
-            log_string('eval %s: %f'%(key, metrics_dict[key]))
+        for scene in range(control_points.shape[0]): # For every scene in a batch
+            # From dump helper
+            objectness_prob = softmax(objectness_scores[scene,:,:])[:,1]
+
+            # Debug
+            # print("Bspline confident shape:", pred_bspline[scene,np.logical_and(objectness_prob>confidence_threshold, pred_mask[scene,:]==1),:].shape)
+
+            # Used to track if an object is detected, 1 if an object has a detected status, 0 if not detected.
+            numObjectsInScene = int(np.sum(objectLabel[scene,:]))
+            detected = np.zeros(numObjectsInScene)
+
+            confident_predictions = pred_bspline[scene,np.logical_and(objectness_prob>confidence_threshold, pred_mask[scene,:]==1),:]
+            for pred in range(confident_predictions.shape[0]):# For each prediction, check distances to ground truths.
+
+                closestToGT = 0 # To keep track of which ground truth the prediction is closest to
+                closestDistance = np.zeros(5) # Distances from predicted points to gt
+
+                for gt in range(numObjectsInScene): # To iterate through all objects in a scene.
+                    distance = np.zeros(5)
+                    revDistance = np.zeros(5)
+                    
+                    prediction = confident_predictions[pred, :].reshape((5,3))
+                    revPrediction = np.flip(prediction, axis=0)
+
+                    groundtruth = control_points[scene, gt, :].reshape((5,3))
+
+                    for point in range(5): # for each point in a DLO
+                        distance[point] = np.linalg.norm(prediction[point,:] - groundtruth[point,:]) # Test one direction of the DLO
+                        revDistance[point] = np.linalg.norm(revPrediction[point,:] - groundtruth[point,:]) # Test the other direction
+
+                    if np.sum(distance) > np.sum(revDistance): # The shortest distance stored in "distance"
+                        distance = revDistance
+
+                    if gt == 0:
+                        closestDistance = distance
+                    else:
+                        if np.sum(distance) < np.sum(closestDistance):
+                            closestToGT = gt
+                            closestDistance = distance
+                
+                detected[closestToGT] = 1
+                if batch_idx == 0 and scene == 0 and pred == 0:
+                    allDetectedDistances = closestDistance
+                else:
+                    allDetectedDistances = np.vstack((allDetectedDistances,closestDistance))
+            
+            totalObjects = totalObjects + numObjectsInScene
+            detectedObjects = detectedObjects + int(np.sum(detected))
+        #     print("Total objects:", totalObjects) For debugging
+        #     print("Detected objects", detectedObjects)
+        #     print("Shape of allDetectedDistances", allDetectedDistances.shape)
+        # print("All allDetectedDistances after scene", allDetectedDistances)
+                
+
+    # Print accuracy!
+    print(f"\nOut of {totalObjects} DLOs, {detectedObjects} DLOs were detected from {allDetectedDistances.shape[0]} predictions\ngiving the model a DLO detection rate of {detectedObjects/totalObjects}")
+    print(f"\n========Statistics from predicted points========")
+    print("\nDistance from predicted points to control points is")
+    print("The mean:", np.mean(allDetectedDistances))
+    print("The standard deviation:", np.std(allDetectedDistances))
+    print("The median:", np.median(allDetectedDistances))
+
+    plt.scatter(np.arange(allDetectedDistances.shape[0]),np.mean(allDetectedDistances, axis=1),c="green")
+    plt.title("Mean")
+    plt.show()
+
+    plt.scatter(np.arange(allDetectedDistances.shape[0]),np.sort(np.mean(allDetectedDistances, axis=1)),c="green")
+    plt.title("Mean sorted")
+    plt.show()
+    
+    print("\nDistance for each closest control point prediction for each DLO is")
+    print("The mean:", np.mean(np.min(allDetectedDistances,axis=1)))
+    print("The standard deviation:", np.std(np.min(allDetectedDistances,axis=1)))
+    print("The median:", np.median(np.min(allDetectedDistances,axis=1)))
+
+    plt.hist(np.mean(allDetectedDistances, axis=1),bins=40)
+    plt.title("Mean histogram")
+    plt.show()
+
+    print("Avarage time for a forward pass with a batch size of 8:", np.mean(forwardPassTimes))
+
+
+
+    #  For standard object detection
+    # Log statistics
+    # for key in sorted(stat_dict.keys()):
+    #     log_string('eval mean %s: %f'%(key, stat_dict[key]/(float(batch_idx+1))))
+
+    # # Evaluate average precision
+    # for i, ap_calculator in enumerate(ap_calculator_list):
+    #     print('-'*10, 'iou_thresh: %f'%(AP_IOU_THRESHOLDS[i]), '-'*10)
+    #     metrics_dict = ap_calculator.compute_metrics()
+    #     for key in metrics_dict:
+    #         log_string('eval %s: %f'%(key, metrics_dict[key]))
 
     mean_loss = stat_dict['loss']/float(batch_idx+1)
     return mean_loss

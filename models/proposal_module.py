@@ -17,7 +17,7 @@ import pointnet2_utils
 
 def decode_scores(net, end_points, num_class, num_heading_bin, num_size_cluster, mean_size_arr):
     net_transposed = net.transpose(2,1) # (batch_size, 1024, ..)
-    print("net.T:", net_transposed.shape)
+    #print("net.T:", net_transposed.shape)
     batch_size = net_transposed.shape[0]
     num_proposal = net_transposed.shape[1]
 
@@ -40,14 +40,24 @@ def decode_scores(net, end_points, num_class, num_heading_bin, num_size_cluster,
     end_points['size_residuals_normalized'] = size_residuals_normalized
     end_points['size_residuals'] = size_residuals_normalized * torch.from_numpy(mean_size_arr.astype(np.float32)).cuda().unsqueeze(0).unsqueeze(0)
 
-    sem_cls_scores = net_transposed[:,:,5+num_heading_bin*2+num_size_cluster*4:] # Bxnum_proposalx10
+    sem_cls_scores = net_transposed[:,:,5+num_heading_bin*2+num_size_cluster*4:5+num_heading_bin*2+num_size_cluster*4+num_class] # Bxnum_proposalx10
     end_points['sem_cls_scores'] = sem_cls_scores
 
-    keys = list(end_points)
-    print("KEYS:")
-    for key in range(len(list(end_points))):
-        if key > 19:
-            print(keys[key],end_points[keys[key]])
+    # NOTE the module calculates the offset from the object center to the points and not their direct geometric points in the point cloud
+    b_spline_points = net_transposed[:,:,5+num_heading_bin*2+num_size_cluster*4+num_class:]
+    b_spline_points[:, :, 0:3] = b_spline_points[:, :, 0:3] + center
+    b_spline_points[:, :, 3:6] = b_spline_points[:, :, 3:6] + center
+    b_spline_points[:, :, 6:9] = b_spline_points[:, :, 6:9] + center
+    b_spline_points[:, :, 9:12] = b_spline_points[:, :, 9:12] + center
+    b_spline_points[:, :, 12:15] = b_spline_points[:, :, 12:15] + center
+
+    end_points['bSplinePoints'] = b_spline_points
+
+    # keys = list(end_points)
+    # print("KEYS:")
+    # for key in range(len(list(end_points))):
+    #     if key > 19:
+    #         print(keys[key],end_points[keys[key]])
 
     return end_points
 
@@ -79,7 +89,7 @@ class ProposalModule(nn.Module):
         # heading class+residual (num_heading_bin*2), size class+residual(num_size_cluster*4)
         self.conv1 = torch.nn.Conv1d(128,128,1)
         self.conv2 = torch.nn.Conv1d(128,128,1)
-        self.conv3 = torch.nn.Conv1d(128,2+3+num_heading_bin*2+num_size_cluster*4+self.num_class,1)
+        self.conv3 = torch.nn.Conv1d(128,2+3+num_heading_bin*2+num_size_cluster*4+self.num_class + 15,1)
         self.bn1 = torch.nn.BatchNorm1d(128)
         self.bn2 = torch.nn.BatchNorm1d(128)
 
@@ -113,13 +123,13 @@ class ProposalModule(nn.Module):
         end_points['aggregated_vote_inds'] = sample_inds # (batch_size, num_proposal,) # should be 0,1,2,...,num_proposal
 
         # --------- PROPOSAL GENERATION ---------
-        print(f"Features shape: {features.shape}")
+        #print(f"Features shape: {features.shape}")
         net = F.relu(self.bn1(self.conv1(features)))
-        print(f"Features shape after first conv layer: {net.shape}")
+        #print(f"Features shape after first conv layer: {net.shape}")
         net = F.relu(self.bn2(self.conv2(net)))
-        print(f"Features shape after second conv layer: {net.shape}")
+        #print(f"Features shape after second conv layer: {net.shape}")
         net = self.conv3(net) # (batch_size, 2+3+num_heading_bin*2+num_size_cluster*4, num_proposal)
-        print(f"Features shape after third conv layer: {net.shape}")
+        #print(f"Features shape after third conv layer: {net.shape}")
 
         end_points = decode_scores(net, end_points, self.num_class, self.num_heading_bin, self.num_size_cluster, self.mean_size_arr)
         return end_points

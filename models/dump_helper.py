@@ -12,7 +12,7 @@ ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 import pc_util
 
-DUMP_CONF_THRESH = 0.5 # Dump boxes with obj prob larger than that.
+DUMP_CONF_THRESH = 0.50 # Dump boxes with obj prob larger than that.
 
 def softmax(x):
     ''' Numpy function for softmax'''
@@ -53,6 +53,11 @@ def dump_results(end_points, dump_dir, config, inference_switch=False):
     pred_size_class = torch.argmax(end_points['size_scores'], -1) # B,num_proposal
     pred_size_residual = torch.gather(end_points['size_residuals'], 2, pred_size_class.unsqueeze(-1).unsqueeze(-1).repeat(1,1,1,3)) # B,num_proposal,1,3
     pred_size_residual = pred_size_residual.squeeze(2).detach().cpu().numpy() # B,num_proposal,3
+    
+    pred_bspline = end_points['bSplinePoints'].detach().cpu().numpy() # B,num_proposal,15
+    print("Bspline prediction shape:", pred_bspline.shape) # For debug
+    control_points = end_points['controlPoints'].detach().cpu().numpy() # B,MaxObjects,15
+    print("Controlpoints shape:", control_points.shape) # For debug
 
     # OTHERS
     pred_mask = end_points['pred_mask'] # B,num_proposal
@@ -65,6 +70,11 @@ def dump_results(end_points, dump_dir, config, inference_switch=False):
         # Dump various point clouds
         pc_util.write_ply(pc, os.path.join(dump_dir, '%06d_pc.ply'%(idx_beg+i)))
         pc_util.write_ply(seed_xyz[i,:,:], os.path.join(dump_dir, '%06d_seed_pc.ply'%(idx_beg+i)))
+
+        # Save controlpoints to compare to generated later
+        print("controlpoints shape:", control_points[i,:,:].shape) # For debug
+        np.save(os.path.join(dump_dir, '%06d_controlpoints'%(idx_beg+i)),control_points[i,:,:])
+        
         if 'vote_xyz' in end_points:
             pc_util.write_ply(end_points['vote_xyz'][i,:,:], os.path.join(dump_dir, '%06d_vgen_pc.ply'%(idx_beg+i)))
             pc_util.write_ply(aggregated_vote_xyz[i,:,:], os.path.join(dump_dir, '%06d_aggregated_vote_pc.ply'%(idx_beg+i)))
@@ -87,6 +97,8 @@ def dump_results(end_points, dump_dir, config, inference_switch=False):
                 pc_util.write_oriented_bbox(obbs[np.logical_and(objectness_prob>DUMP_CONF_THRESH, pred_mask[i,:]==1),:], os.path.join(dump_dir, '%06d_pred_confident_nms_bbox.ply'%(idx_beg+i)))
                 pc_util.write_oriented_bbox(obbs[pred_mask[i,:]==1,:], os.path.join(dump_dir, '%06d_pred_nms_bbox.ply'%(idx_beg+i)))
                 pc_util.write_oriented_bbox(obbs, os.path.join(dump_dir, '%06d_pred_bbox.ply'%(idx_beg+i)))
+                print("Bspline confident shape:", pred_bspline[i,np.logical_and(objectness_prob>DUMP_CONF_THRESH, pred_mask[i,:]==1),:].shape) # For debug
+                np.save(os.path.join(dump_dir, '%06d_confident_bSplinePoints'%(idx_beg+i)),pred_bspline[i,np.logical_and(objectness_prob>DUMP_CONF_THRESH, pred_mask[i,:]==1),:])
 
     # Return if it is at inference time. No dumping of groundtruths
     if inference_switch:
