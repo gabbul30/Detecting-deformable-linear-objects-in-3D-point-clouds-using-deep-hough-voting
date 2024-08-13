@@ -26,13 +26,13 @@ There would also have to be a train/test split on the data where I would refer t
 ## Training and testing
 To train a model, use the following command:
 
-    CUDA_VISIBLE_DEVICES=0 python3 train.py --dataset dlos --log_dir logDir --no_height
+    CUDA_VISIBLE_DEVICES=0 python3 train.py --dataset dlos --log_dir logs/logDir --no_height
 
 The height feature was not used in this project, so the dataloader will not take height into account. That is why the flag "--no_height" is used.
 
 To test and evaluate the model, use the following command:
 
-    python3 eval.py --dataset dlos --checkpoint_path logDir/checkpoint.tar --dump_dir dumpDir --cluster_sampling seed_fps --use_3d_nms --use_cls_nms --per_class_proposal --no_height
+    python3 eval.py --dataset dlos --checkpoint_path logs/logDir/checkpoint.tar --dump_dir evals/dumpDir --cluster_sampling seed_fps --use_3d_nms --use_cls_nms --per_class_proposal --no_height
 
 These commands only differ from the original commands included in the original README by using the --no_height flag and using "dlos" as dataset. "dlos" uses the custom dataloader made for the project. "sunrgbd" and "scannet" will not work because they are not compatible with the modifications done to the algorithm. The accuracy used in the evaluation is described in the paper for this project.
 

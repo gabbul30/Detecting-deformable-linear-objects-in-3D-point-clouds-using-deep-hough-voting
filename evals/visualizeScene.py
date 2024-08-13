@@ -40,8 +40,8 @@ if __name__ == "__main__":
 
     for i in range(8):
         
-        control_points = np.load("NameOfEval/00000" + str(i) + "_controlpoints.npy")
-        generatedDlos = np.load("NameOfEval/00000" + str(i) + "_confident_bSplinePoints.npy")
+        control_points = np.load("NameOfDumpDir/00000" + str(i) + "_controlpoints.npy")
+        generatedDlos = np.load("NameOfDumpDir/00000" + str(i) + "_confident_bSplinePoints.npy")
 
 
         print(control_points.shape) # [maxNumObjects, 15]
