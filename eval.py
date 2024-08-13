@@ -170,13 +170,13 @@ def evaluate_one_epoch():
         # Forward pass
         inputs = {'point_clouds': batch_data_label['point_clouds']}
 
-        if inputs['point_clouds'].shape[0] == 8:
+        if inputs['point_clouds'].shape[0] == BATCH_SIZE:
             forwardPassTime = time.time()
 
         with torch.no_grad():
             end_points = net(inputs)
 
-        if inputs['point_clouds'].shape[0] == 8:
+        if inputs['point_clouds'].shape[0] == BATCH_SIZE:
             forwardPassTimes.append(time.time() - forwardPassTime)
             print("forward pass time:", forwardPassTimes[batch_idx])
 
@@ -289,7 +289,7 @@ def evaluate_one_epoch():
     plt.title("Mean histogram")
     plt.show()
 
-    print("Avarage time for a forward pass with a batch size of 8:", np.mean(forwardPassTimes))
+    print("Avarage time for a forward pass with a batch size of", BATCH_SIZE ,":", np.mean(forwardPassTimes))
 
 
 
